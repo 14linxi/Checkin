@@ -1,0 +1,89 @@
+name: Daily check-in
+
+on:
+  schedule:
+    # GitHub Actions uses UTC. 23:00 UTC is 07:00 the next day in Beijing.
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-check-in
+  cancel-in-progress: false
+
+jobs:
+  check-in:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Prepare private configuration
+        env:
+          TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
+          NOTIFICATION_JSON: ${{ secrets.NOTIFICATION_JSON }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$TOKEN_JSON" ]; then
+            echo "::error::The TOKEN_JSON repository secret is not configured."
+            exit 1
+          fi
+
+          mkdir -p config
+          printf '%s' "$TOKEN_JSON" > config/token.json
+          python -m json.tool config/token.json > /dev/null
+
+          if [ -n "$NOTIFICATION_JSON" ]; then
+            printf '%s' "$NOTIFICATION_JSON" > config/notification.json
+            python -m json.tool config/notification.json > /dev/null
+          fi
+
+      - name: Run check-in scripts
+        run: |
+          set +e
+          failed=0
+
+          run_script() {
+            script="$1"
+            echo "::group::Running $script"
+            python "$script"
+            status=$?
+            echo "::endgroup::"
+
+            if [ "$status" -ne 0 ]; then
+              echo "::error file=$script::Script failed with exit code $status"
+              failed=1
+            fi
+          }
+
+          run_script script/sf/main.py
+          run_script script/enshan/sign_in.py
+          run_script script/kanxue/sign_in.py
+          run_script script/shyp/main.py
+          run_script script/huaruntong/999/main.py
+          run_script script/huaruntong/huaruntong_wx/main.py
+          run_script script/huaruntong/wentiweilaihui/main.py
+          run_script script/erke/main.py
+          run_script script/wps/main.py
+          run_script script/smzdm/sign_daily_task/main.py
+
+          exit "$failed"

@@ -1,0 +1,6 @@
+requests>=2.31,<3
+Pillow>=10,<13
+pycryptodome>=3.19,<4
+PyExecJS>=1.5,<2
+numpy>=1.26,<3
+cryptography>=42,<46

@@ -5,6 +5,57 @@ on:
     # GitHub Actions uses UTC. 23:00 UTC is 07:00 the next day in Beijing.
     - cron: "0 23 * * *"
   workflow_dispatch:
+    inputs:
+      run_sf:
+        description: "运行顺丰速运"
+        type: boolean
+        required: false
+        default: true
+      run_enshan:
+        description: "运行恩山论坛"
+        type: boolean
+        required: false
+        default: true
+      run_kanxue:
+        description: "运行看雪论坛"
+        type: boolean
+        required: false
+        default: true
+      run_shyp:
+        description: "运行上海杨浦"
+        type: boolean
+        required: false
+        default: true
+      run_huaruntong_999:
+        description: "运行华润通万象星"
+        type: boolean
+        required: false
+        default: true
+      run_huaruntong_wx:
+        description: "运行华润通微信版"
+        type: boolean
+        required: false
+        default: true
+      run_huaruntong_wentiweilaihui:
+        description: "运行华润通文体未来荟"
+        type: boolean
+        required: false
+        default: true
+      run_erke:
+        description: "运行鸿星尔克"
+        type: boolean
+        required: false
+        default: true
+      run_wps:
+        description: "运行 WPS Office"
+        type: boolean
+        required: false
+        default: true
+      run_smzdm:
+        description: "运行什么值得买"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -58,12 +109,30 @@ jobs:
           fi
 
       - name: Run check-in scripts
+        env:
+          RUN_SF: ${{ github.event_name == 'schedule' || inputs.run_sf }}
+          RUN_ENSHAN: ${{ github.event_name == 'schedule' || inputs.run_enshan }}
+          RUN_KANXUE: ${{ github.event_name == 'schedule' || inputs.run_kanxue }}
+          RUN_SHYP: ${{ github.event_name == 'schedule' || inputs.run_shyp }}
+          RUN_HUARUNTONG_999: ${{ github.event_name == 'schedule' || inputs.run_huaruntong_999 }}
+          RUN_HUARUNTONG_WX: ${{ github.event_name == 'schedule' || inputs.run_huaruntong_wx }}
+          RUN_HUARUNTONG_WENTIWEILAIHUI: ${{ github.event_name == 'schedule' || inputs.run_huaruntong_wentiweilaihui }}
+          RUN_ERKE: ${{ github.event_name == 'schedule' || inputs.run_erke }}
+          RUN_WPS: ${{ github.event_name == 'schedule' || inputs.run_wps }}
+          RUN_SMZDM: ${{ github.event_name == 'schedule' || inputs.run_smzdm }}
         run: |
           set +e
           failed=0
 
           run_script() {
-            script="$1"
+            enabled="$1"
+            script="$2"
+
+            if [ "$enabled" != "true" ]; then
+              echo "Skipping $script"
+              return
+            fi
+
             echo "::group::Running $script"
             python "$script"
             status=$?
@@ -75,15 +144,15 @@ jobs:
             fi
           }
 
-          run_script script/sf/main.py
-          run_script script/enshan/sign_in.py
-          run_script script/kanxue/sign_in.py
-          run_script script/shyp/main.py
-          run_script script/huaruntong/999/main.py
-          run_script script/huaruntong/huaruntong_wx/main.py
-          run_script script/huaruntong/wentiweilaihui/main.py
-          run_script script/erke/main.py
-          run_script script/wps/main.py
-          run_script script/smzdm/sign_daily_task/main.py
+          run_script "$RUN_SF" script/sf/main.py
+          run_script "$RUN_ENSHAN" script/enshan/sign_in.py
+          run_script "$RUN_KANXUE" script/kanxue/sign_in.py
+          run_script "$RUN_SHYP" script/shyp/main.py
+          run_script "$RUN_HUARUNTONG_999" script/huaruntong/999/main.py
+          run_script "$RUN_HUARUNTONG_WX" script/huaruntong/huaruntong_wx/main.py
+          run_script "$RUN_HUARUNTONG_WENTIWEILAIHUI" script/huaruntong/wentiweilaihui/main.py
+          run_script "$RUN_ERKE" script/erke/main.py
+          run_script "$RUN_WPS" script/wps/main.py
+          run_script "$RUN_SMZDM" script/smzdm/sign_daily_task/main.py
 
           exit "$failed"
